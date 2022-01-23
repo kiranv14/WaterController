@@ -23,11 +23,11 @@ float prev_distance;
 float thresh = 0.2;
 float distanceInch;
 const int trigPin = 5;
-const int echoPin = 1;
-long lastRunTime;
+const int echoPin = 4;
+long lastRunTimeLev;
 long lastRunTimeInflux;
 int led_state =0;//0 = off, 1 = on, 2 = blink, 4 = change colors
-int led color =1;//1=red,2=green,3=amber;
+int led_color =1;//1=red,2=green,3=amber;
 
 auto led_green = JLed(3).Breathe(2000).Repeat(5000).DelayAfter(2000);
 auto led_red = JLed(4).Breathe(2000).Repeat(5000).DelayAfter(2000);
@@ -95,7 +95,7 @@ void setup() {
   Serial.println("Starting setup");
   delay(100);
   wifiConnect();
-  lastRunTime=lastRunTimeInflux=0);
+  lastRunTimeLev=lastRunTimeInflux=0;
 }
 
 void loop() {
