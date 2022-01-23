@@ -10,6 +10,7 @@ ESP8266WiFiMulti wifiMulti;
 #include <InfluxDbClient.h> // load the client library
 #include <InfluxDbCloud.h> // only for InfluxDB Cloud: load SSL certificate and additional method call
 #include "secrets.h" // load connection credentials
+#include <jled.h>
 
 #define SLEEP_S 30 // how many seconds to sleep between readings
 #define DEVICE_ID "LevelMon"
@@ -22,7 +23,15 @@ float prev_distance;
 float thresh = 0.2;
 float distanceInch;
 const int trigPin = 5;
-const int echoPin = 4;
+const int echoPin = 1;
+long lastRunTime;
+long lastRunTimeInflux;
+int led_state =0;//0 = off, 1 = on, 2 = blink, 4 = change colors
+int led color =1;//1=red,2=green,3=amber;
+
+auto led_green = JLed(3).Breathe(2000).Repeat(5000).DelayAfter(2000);
+auto led_red = JLed(4).Breathe(2000).Repeat(5000).DelayAfter(2000);
+
 
 #define TZ_INFO "Asia/Kolkata"
 
@@ -86,14 +95,27 @@ void setup() {
   Serial.println("Starting setup");
   delay(100);
   wifiConnect();
+  lastRunTime=lastRunTimeInflux=0);
 }
 
 void loop() {
-  readlevel();
-  sendInflux();
-  delay(5000);
+  delay(500);
+  if(millis()-lastRunTimeLev>=1000)
+  {
+      readlevel();
+      lastRunTimeLev=millis();
+  }
+  if(millis()-lastRunTimeInflux>=30000)
+  {
+      sendInflux();
+      lastRunTimeInflux=millis();
+  }
+  ledUpdate();
 }
-
+void ledUpdate()
+{
+  //change LED color or blink LEDs
+}
 // try to connect to given SSID and key, loop until successful
 void wifiConnect() {
    Serial.println("Scanning Wifi Networks...");
