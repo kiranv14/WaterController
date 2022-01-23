@@ -85,13 +85,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Starting setup");
   delay(100);
-  wifiConnect(WIFI_SSID, WIFI_KEY);
-  // BEGIN: read sensor values (add your real code here)
-  readlevel();
-  sendInflux();  
-  // this sends the microcontroller to deepsleep until the next reading needs to be taken
-  //  due to WiFi connect and sensor reading your measurement interval will always be 5~10 seconds longer than the SLEEP_S duration
-  ESP.deepSleep(SLEEP_S * 1000000); // offset by the duration the program run (converted from ms to µs)
+  wifiConnect();
 }
 
 void loop() {
@@ -101,14 +95,26 @@ void loop() {
 }
 
 // try to connect to given SSID and key, loop until successful
-void wifiConnect(const char* ssid, const char* key) {
-  WiFi.begin(ssid, key);
-  Serial.print("Waiting for WiFi connection..");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
+void wifiConnect() {
+   Serial.println("Scanning Wifi Networks...");
+   int n = WiFi.scanNetworks();
+   Serial.print(n);Serial.println("Wifi networks found. Trying to connect to 2 known networks");
+   for (int i = 0; i < n; ++i) {
+     Serial.println(WiFi.SSID(i));
+     if (WiFi.SSID(i)== WIFI_SSID1) {
+        WiFi.begin(WIFI_SSID1,WIFI_KEY1);
+        break;
+     }
+     if (WiFi.SSID(i)== WIFI_SSID2) {
+       WiFi.begin(WIFI_SSID2,WIFI_KEY2);
+       break;
+     }
+    }
+  while(WiFi.status() != WL_CONNECTED) {
     delay(500);
+    Serial.print(".");
   }
-  Serial.println(".");
+  Serial.println("");
   Serial.print("Successfully connected to ");
   Serial.println(WiFi.SSID());
 }
