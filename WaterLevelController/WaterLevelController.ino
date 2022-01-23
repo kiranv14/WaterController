@@ -1,11 +1,11 @@
 #if defined(ESP32)
-  #include <WiFiMulti.h>
-  WiFiMulti wifiMulti;
-  #define DEVICE "ESP32"
+#include <WiFiMulti.h>
+WiFiMulti wifiMulti;
+#define DEVICE "ESP32"
 #elif defined(ESP8266)
-  #include <ESP8266WiFiMulti.h>
-  ESP8266WiFiMulti wifiMulti;
-  #define DEVICE "ESP8266"
+#include <ESP8266WiFiMulti.h>
+ESP8266WiFiMulti wifiMulti;
+#define DEVICE "ESP8266"
 #endif
 #include <InfluxDbClient.h> // load the client library
 #include <InfluxDbCloud.h> // only for InfluxDB Cloud: load SSL certificate and additional method call
@@ -49,15 +49,13 @@ void readlevel()
 void sendInflux()
 {
   float sensor_value1 = distanceCm;
-  float sensor_value2 = 74-distanceCm;
   // END: read sensor values
-  Point pointDevice("mymeasurement"); // create a new measurement point (the same point can be used for Cloud and v1 InfluxDB)
+  Point pointDevice("irrigation_tanks"); // create a new measurement point (the same point can be used for Cloud and v1 InfluxDB)
   // add tags to the datapoints so you can filter them
   pointDevice.addTag("device", DEVICE_ID);
   pointDevice.addTag("SSID", WiFi.SSID());
   // Add data fields (values)
-  pointDevice.addField("sensor1", sensor_value1);
-  pointDevice.addField("sensor2", sensor_value2);
+  pointDevice.addField("sensor3", sensor_value1);
   pointDevice.addField("uptime", millis()); // in addition send the uptime of the Arduino
   pointDevice.addField("Strength",WiFi.RSSI());
    timeSync(TZ_INFO, "pool.ntp.org", "time.nis.gov");
