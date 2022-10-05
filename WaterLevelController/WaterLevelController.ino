@@ -69,6 +69,7 @@ void sendInflux()
   // Add data fields (values)
   pointDevice.addField("Tank1", sensor_value1);
   pointDevice.addField("Tank2", sensor_value2);
+  pointDevice.addField("Pump State", pump_state);
   pointDevice.addField("uptime", millis()); // in addition send the uptime of the Arduino
   pointDevice.addField("Strength",WiFi.RSSI());
   // Check server connection
@@ -126,30 +127,38 @@ void wifiConnect(const char* ssid, const char* key) {
 }
 void controlPump()
 {
-  do
-  {
-    long pumpStartTime = millis();
   //run the pump for maxtime till the tank is full. trigger at 50% and stop at 80%. Pumping will wait for max_time before continuing
   tankperc = (totalHeight_t2-distanceCm_t2)/totalHeight_t2*100;
   if(tankperc<=pump_trig_low)
   {
     digitalWrite(pumpPin,HIGH);
-  }
-  while(millis()-pumpStartTime<=pump_max_sec)
-  {
-    delay(1000);//evaluate later
-    readlevel();
-    sendInflux();
-    if(tankperc>=pump_trig_high)
+    pump_state=1;
+    do
     {
-      break;
+        long pumpStartTime = millis();
+        while(millis()-pumpStartTime<=pump_max_sec)
+        {
+          delay(1000);//evaluate later
+          readlevel(trigPin_t2,echoPin_t2);
+          sendInflux();
+          if(tankperc>=pump_trig_high)
+          {
+            break;
+          }
+        }
+        digitalWrite(pumpPin,LOW);
+        pump_state=0;
+        if(tankperc<=pump_trig_high)
+        {
+          pump_state=-1;
+          sendInflux();
+          delay(pump_max_sec*1000);
+          pump_state=1;
+          sendInflux();
+        }
+        }while(tankperc<=pump_trig_high);
     }
-  }
-  digitalWrite(pumpPin,LOW);
-  if(tankperc<=pump_trig_high)
-  {
-    delay(pump_max_sec*1000);
-  }
-  }while(tankperc<=pump_trig_high);
-  digitalWrite(pumpPin,LOW);
+    digitalWrite(pumpPin,LOW);
+    pump_state=0;
+  sendInflux();
 }
