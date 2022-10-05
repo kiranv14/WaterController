@@ -16,5 +16,3 @@ Functions:
 - IDE:Arduino
 - Cloud Storage: Influx Cloud
 - Visualization: Grafana Cloud
-
-
