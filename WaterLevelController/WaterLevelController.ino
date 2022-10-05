@@ -16,6 +16,7 @@
 #define SOUND_VELOCITY 0.034
 #define CM_TO_INCH 0.393701
 
+
 long duration;
 float distanceCm_t1;
 float distanceCm_t2;
@@ -31,6 +32,8 @@ const int echoPin_t2 = 12;
 const int pumpPin = 15;
 int pump_max_sec=300;//5 min
 int pump_state=0;//0=OFF;1=ON
+int pump_trig_low = 50;
+int pump_trig_high=90;
 
 #define TZ_INFO "Asia/Kolkata"
 
@@ -123,6 +126,30 @@ void wifiConnect(const char* ssid, const char* key) {
 }
 void controlPump()
 {
-  //check the system time. 2 modes - when solar power assumed to be available; aggressive mode. when solar power not available - emergency mode
-  
+  do
+  {
+    long pumpStartTime = millis();
+  //run the pump for maxtime till the tank is full. trigger at 50% and stop at 80%. Pumping will wait for max_time before continuing
+  tankperc = (totalHeight_t2-distanceCm_t2)/totalHeight_t2*100;
+  if(tankperc<=pump_trig_low)
+  {
+    digitalWrite(pumpPin,HIGH);
+  }
+  while(millis()-pumpStartTime<=pump_max_sec)
+  {
+    delay(1000);//evaluate later
+    readlevel();
+    sendInflux();
+    if(tankperc>=pump_trig_high)
+    {
+      break;
+    }
+  }
+  digitalWrite(pumpPin,LOW);
+  if(tankperc<=pump_trig_high)
+  {
+    delay(pump_max_sec*1000);
+  }
+  }while(tankperc<=pump_trig_high);
+  digitalWrite(pumpPin,LOW);
 }
