@@ -38,12 +38,12 @@ int pump_trig_high=90;
 #define TZ_INFO "Asia/Kolkata"
 
 // InfluxDB client for InfluxDB Cloud API
-InfluxDBClient client_cloud(INFLUXDB_CLOUD_URL, INFLUXDB_CLOUD_ORG, INFLUXDB_CLOUD_BUCKET, INFLUXDB_CLOUD_TOKEN, InfluxDbCloud2CACert);
+InfluxDBClient client_cloud(INFLUXDB_URL, INFLUXDB_ORG, INFLUXDB_BUCKET, INFLUXDB_TOKEN, InfluxDbCloud2CACert);
 
-void readlevel(int tp,ep)
+float readlevel(int tp,int ep)
 {
+  float distanceCm=0;
   Serial.println("Read Level");
-  prev_distance = distanceCm;
   digitalWrite(tp, LOW);
   delayMicroseconds(2);
   // Sets the trigPin on HIGH state for 10 micro seconds
@@ -56,6 +56,7 @@ void readlevel(int tp,ep)
   // Calculate the distance
   distanceCm = duration * SOUND_VELOCITY/2;
   Serial.println(distanceCm);
+  return distanceCm;
 }
 void sendInflux()
 {
@@ -64,7 +65,7 @@ void sendInflux()
   // END: read sensor values
   Point pointDevice("Home_WaterTanks"); // create a new measurement point (the same point can be used for Cloud and v1 InfluxDB)
   // add tags to the datapoints so you can filter them
-  //pointDevice.addTag("device", DEVICE_ID);
+  pointDevice.addTag("device", DEVICE_ID);
   //pointDevice.addTag("SSID", WiFi.SSID());
   // Add data fields (values)
   pointDevice.addField("Tank1", sensor_value1);
@@ -96,13 +97,16 @@ void setup() {
   pinMode(echoPin_t1, INPUT); // Sets the echoPin as an Input
   pinMode(trigPin_t2, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin_t2, INPUT); // Sets the echoPin as an Input
+  pinMode(pumpPin, OUTPUT);
+  digitalWrite(pumpPin,HIGH);
+    pump_state=0;
   Serial.begin(115200);
   Serial.println("Starting setup");
   delay(100);
-  wifiConnect(WIFI_SSID, WIFI_KEY);
+  wifiConnect(WIFI_SSID, WIFI_PASSWORD);
   timeSync(TZ_INFO, "pool.ntp.org", "time.nis.gov");
-  readlevel(trigPin_t1,echoPin_t1);
-  readlevel(trigPin_t2,echoPin_t2);
+  distanceCm_t1 = readlevel(trigPin_t1,echoPin_t1);
+  distanceCm_t2 = readlevel(trigPin_t2,echoPin_t2);
   controlPump();
   sendInflux();
   // this sends the microcontroller to deepsleep until the next reading needs to be taken
@@ -128,10 +132,10 @@ void wifiConnect(const char* ssid, const char* key) {
 void controlPump()
 {
   //run the pump for maxtime till the tank is full. trigger at 50% and stop at 80%. Pumping will wait for max_time before continuing
-  tankperc = (totalHeight_t2-distanceCm_t2)/totalHeight_t2*100;
+  float tankperc = (totalHeight_t2-distanceCm_t2)/totalHeight_t2*100;
   if(tankperc<=pump_trig_low)
   {
-    digitalWrite(pumpPin,HIGH);
+    digitalWrite(pumpPin,LOW);
     pump_state=1;
     do
     {
@@ -139,14 +143,16 @@ void controlPump()
         while(millis()-pumpStartTime<=pump_max_sec)
         {
           delay(1000);//evaluate later
-          readlevel(trigPin_t2,echoPin_t2);
+          distanceCm_t2 = readlevel(trigPin_t2,echoPin_t2);
           sendInflux();
           if(tankperc>=pump_trig_high)
           {
+            digitalWrite(pumpPin,HIGH);
+            pump_state=0;
             break;
           }
         }
-        digitalWrite(pumpPin,LOW);
+        digitalWrite(pumpPin,HIGH);
         pump_state=0;
         if(tankperc<=pump_trig_high)
         {
@@ -158,7 +164,7 @@ void controlPump()
         }
         }while(tankperc<=pump_trig_high);
     }
-    digitalWrite(pumpPin,LOW);
+    digitalWrite(pumpPin,HIGH);
     pump_state=0;
   sendInflux();
 }
