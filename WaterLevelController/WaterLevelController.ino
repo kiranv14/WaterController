@@ -25,14 +25,14 @@ float thresh = 0.2;
 float distanceInch;
 float totalHeight_t1=65;
 float totalHeight_t2=56;
-const int trigPin_t1 = 5;
-const int echoPin_t1 = 4;
-const int trigPin_t2 = 14;
-const int echoPin_t2 = 12;
-const int pumpPin = 15;
+const int trigPin_t1 = 5;//D1
+const int echoPin_t1 = 4;//D2
+const int trigPin_t2 = 14;//D5
+const int echoPin_t2 = 12;//D6
+const int pumpPin = 15;//D8
 int pump_max_sec=300;//5 min
 int pump_state=0;//0=OFF;1=ON
-int pump_trig_low = 50;
+int pump_trig_low = 80;
 int pump_trig_high=90;
 
 #define TZ_INFO "Asia/Kolkata"
@@ -105,16 +105,18 @@ void setup() {
   delay(100);
   wifiConnect(WIFI_SSID, WIFI_PASSWORD);
   timeSync(TZ_INFO, "pool.ntp.org", "time.nis.gov");
+}
+
+void loop() {
   distanceCm_t1 = readlevel(trigPin_t1,echoPin_t1);
   distanceCm_t2 = readlevel(trigPin_t2,echoPin_t2);
   controlPump();
   sendInflux();
-  // this sends the microcontroller to deepsleep until the next reading needs to be taken
-  //  due to WiFi connect and sensor reading your measurement interval will always be 5~10 seconds longer than the SLEEP_S duration
-  ESP.deepSleep(SLEEP_S * 1000000); // offset by the duration the program run (converted from ms to µs)
-}
-
-void loop() {
+  delay(30000);
+  if(millis()/1000>=3600)
+  {
+    ESP.deepSleep(SLEEP_S * 100); // offset by the duration the program run (converted from ms to µs)
+  }
 }
 
 // try to connect to given SSID and key, loop until successful
@@ -132,7 +134,11 @@ void wifiConnect(const char* ssid, const char* key) {
 void controlPump()
 {
   //run the pump for maxtime till the tank is full. trigger at 50% and stop at 80%. Pumping will wait for max_time before continuing
+  digitalWrite(pumpPin,HIGH);
+  pump_state=0;
   float tankperc = (totalHeight_t2-distanceCm_t2)/totalHeight_t2*100;
+    Serial.println("Enter controlPump");
+   Serial.println(tankperc);
   if(tankperc<=pump_trig_low)
   {
     digitalWrite(pumpPin,LOW);
@@ -144,6 +150,8 @@ void controlPump()
         {
           delay(1000);//evaluate later
           distanceCm_t2 = readlevel(trigPin_t2,echoPin_t2);
+          tankperc = (totalHeight_t2-distanceCm_t2)/totalHeight_t2*100;
+          Serial.println(tankperc);
           sendInflux();
           if(tankperc>=pump_trig_high)
           {
@@ -163,7 +171,10 @@ void controlPump()
           sendInflux();
         }
         }while(tankperc<=pump_trig_high);
-    }
+  }
+  else{
+    Serial.println("No need to pump");
+  }
     digitalWrite(pumpPin,HIGH);
     pump_state=0;
   sendInflux();
